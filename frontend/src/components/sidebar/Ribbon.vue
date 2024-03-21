@@ -1,23 +1,20 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { NIcon, useThemeVars } from 'naive-ui'
+import {computed, ref} from 'vue'
+import {NIcon, useThemeVars} from 'naive-ui'
 import Database from '@/components/icons/Database.vue'
-import { useI18n } from 'vue-i18n'
+import {useI18n} from 'vue-i18n'
 import Server from '@/components/icons/Server.vue'
 import IconButton from '@/components/common/IconButton.vue'
 import Config from '@/components/icons/Config.vue'
 import useDialogStore from 'stores/dialog.js'
-import Github from '@/components/icons/Github.vue'
-import { BrowserOpenURL } from 'wailsjs/runtime/runtime.js'
+import {BrowserOpenURL} from 'wailsjs/runtime/runtime.js'
 import usePreferencesStore from 'stores/preferences.js'
 import Record from '@/components/icons/Record.vue'
-import { extraTheme } from '@/utils/extra_theme.js'
+import {extraTheme} from '@/utils/extra_theme.js'
 import useBrowserStore from 'stores/browser.js'
-import { useRender } from '@/utils/render.js'
-import wechatUrl from '@/assets/images/wechat_official.png'
+import {useRender} from '@/utils/render.js'
 import QRCode from '@/components/icons/QRCode.vue'
-import Twitter from '@/components/icons/Twitter.vue'
-import { trackEvent } from '@/utils/analytics.js'
+import {trackEvent} from '@/utils/analytics.js'
 
 const themeVars = useThemeVars()
 const render = useRender()
@@ -185,32 +182,7 @@ const exThemeVars = computed(() => {
                 class="nav-menu-button"
                 t-tooltip="ribbon.wechat_official"
                 @click="openWechatOfficial" />
-            <icon-button
-                v-else
-                :border="false"
-                :icon="Twitter"
-                :size="iconSize"
-                :tooltip-delay="100"
-                class="nav-menu-button"
-                t-tooltip="ribbon.follow_x"
-                @click="openX" />
-            <icon-button
-                :icon="Github"
-                :size="iconSize"
-                :tooltip-delay="100"
-                class="nav-menu-button"
-                t-tooltip="ribbon.github"
-                @click="openGithub" />
         </div>
-
-        <!-- wechat official modal -->
-        <n-modal
-            :show="showWechat"
-            transform-origin="center"
-            @close="showWechat = false"
-            @mask-click="showWechat = false">
-            <n-image :src="wechatUrl" :width="400" preview-disabled />
-        </n-modal>
     </div>
 </template>
 
