@@ -40,6 +40,7 @@
       "font_tip": "フォント名を選択または入力してください",
       "font_size": "フォントサイズ",
       "scan_size": "SCANコマンドのデフォルトサイズ",
+      "scan_size_tip": "SCAN/HSCAN/SSCAN/ZSCAN コマンドで1回に返される要素の数",
       "key_icon_style": "キーアイコンのスタイル",
       "key_icon_style0": "コンパクトタイプ",
       "key_icon_style1": "フルネームタイプ",
@@ -125,6 +126,8 @@
     "length": "長さ",
     "entries": "エントリ",
     "memory_usage": "メモリ使用量",
+    "text_align_left": "左揃え",
+    "text_align_center": "中央揃え",
     "view_as": "表示形式",
     "decode_with": "デコード/解凍",
     "custom_decoder": "新しいカスタムデコーダー",
@@ -263,8 +266,8 @@
         "auto_discover": "自動検出",
         "password": "マスターパスワード",
         "username": "マスターユーザー名",
-        "pwd_tip": "（オプション）マスター認証,ユーザー名",
-        "usr_tip": "（オプション）マスター認証パスワード (Redis > 6.0)"
+        "pwd_tip": "（オプション）マスター認証パスワード (Redis > 6.0)",
+        "usr_tip": "（オプション）マスター認証,ユーザー名"
       },
       "cluster": {
         "title": "クラスターモード",
@@ -295,6 +298,8 @@
       "affected_key": "影響を受けるキー",
       "show_affected_key": "影響を受けるキーを表示",
       "confirm_delete_key": "{num}個のキーを削除することを確認",
+      "direct_delete": "一致するパターンを直接削除",
+      "confirm_delete": "削除を確認",
       "async_delete": "非同期実行",
       "async_delete_title": "結果を待たない",
       "confirm_flush": "自分が実行しようとしている操作を理解しています！",
@@ -327,8 +332,9 @@
     "filter": {
       "set_key_filter": "キーフィルターを設定",
       "filter_pattern": "パターン",
-      "filter_pattern_tip": "*：0文字以上にマッチ。例：\"key*\"は\"key\"で始まるすべてのキーにマッチ\n?：1文字にマッチ。例：\"key?\"は\"key1\"、\"key2\"にマッチ\n[ ]：指定範囲の1文字にマッチ。例：\"key[1-3]\"は\"key1\"、\"key2\"、\"key3\"にマッチ\n\\：エスケープ文字。*、?、[、]をリテラルとして解釈したい場合は\"\\ \"をつける",
-      "exact_match_tip": "完全一致"
+      "filter_pattern_tip": "直接入力して現在のリストをフィルタリングし、Enterキーを押すとサーバーをスキャンできます。\n\n*：0文字以上にマッチ。例：\"key*\"は\"key\"で始まるすべてのキーにマッチ\n?：1文字にマッチ。例：\"key?\"は\"key1\"、\"key2\"にマッチ\n[ ]：指定範囲の1文字にマッチ。例：\"key[1-3]\"は\"key1\"、\"key2\"、\"key3\"にマッチ\n\\：エスケープ文字。*、?、[、]をリテラルとして解釈したい場合は\"\\ \"をつける",
+      "exact_match_tip": "完全一致",
+      "filter_type_not_support": "タイプフィルタリングは、Redis 5.x 以前のバージョンには対応していません"
     },
     "export": {
       "name": "データをエクスポート",
@@ -456,7 +462,7 @@
     "copy_log": "ログをコピー",
     "save_log": "ログを保存",
     "clean_log": "ログをクリア",
-    "always_show_last": "最新を常に表示"
+    "always_show_last": "最新に自動スクロール"
   },
   "pubsub": {
     "title": "パブ/サブ",
@@ -469,6 +475,6 @@
     "channel": "チャンネル",
     "message": "メッセージ",
     "receive_message": "{total}件のメッセージを受信しました",
-    "always_show_last": "最新を常に表示"
+    "always_show_last": "最新に自動スクロール"
   }
 }

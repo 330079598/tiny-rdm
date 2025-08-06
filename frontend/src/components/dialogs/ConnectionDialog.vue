@@ -1,5 +1,5 @@
 <script setup>
-import { every, get, includes, isEmpty, map, reject, sortBy, toNumber } from 'lodash'
+import { every, get, includes, isEmpty, map, reject, sortBy, toNumber, trim } from 'lodash'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ListSentinelMasters, TestConnection } from 'wailsjs/go/services/connectionService.js'
@@ -169,9 +169,11 @@ const onSaveConnection = async () => {
         generalForm.value.network = 'unix'
         generalForm.value.addr = ''
         generalForm.value.port = 0
+        generalForm.value.sock = trim(generalForm.value.sock)
     } else {
-        generalForm.value.network = ''
+        generalForm.value.network = 'tcp'
         generalForm.value.sock = ''
+        generalForm.value.addr = trim(generalForm.value.addr)
     }
 
     // trim advance data
@@ -329,14 +331,15 @@ const pasteFromClipboard = async () => {
     <n-modal
         v-model:show="dialogStore.connDialogVisible"
         :closable="false"
-        :close-on-esc="false"
         :mask-closable="false"
         :on-after-leave="resetForm"
         :show-icon="false"
         :title="isEditMode ? $t('dialogue.connection.edit_title') : $t('dialogue.connection.new_title')"
+        close-on-esc
         preset="dialog"
         style="width: 600px"
-        transform-origin="center">
+        transform-origin="center"
+        @esc="onClose">
         <n-spin :show="closingConnection">
             <n-tabs
                 v-model:value="tab"
@@ -504,7 +507,7 @@ const pasteFromClipboard = async () => {
                                 </n-radio-group>
                             </n-form-item-gi>
                             <n-form-item-gi
-                                v-show="generalForm.dbFilterType !== 'none'"
+                                v-if="generalForm.dbFilterType !== 'none'"
                                 :label="$t('dialogue.connection.advn.dbfilter_input')"
                                 :span="24">
                                 <n-select

@@ -6,7 +6,7 @@ import { NButton, NIcon, useThemeVars } from 'naive-ui'
 import { types, types as redisTypes } from '@/consts/support_redis_type.js'
 import EditableTableColumn from '@/components/common/EditableTableColumn.vue'
 import useDialogStore from 'stores/dialog.js'
-import { isEmpty, size } from 'lodash'
+import { isEmpty, size, truncate } from 'lodash'
 import { decodeTypes, formatTypes } from '@/consts/value_view_type.js'
 import useBrowserStore from 'stores/browser.js'
 import LoadList from '@/components/icons/LoadList.vue'
@@ -15,10 +15,14 @@ import IconButton from '@/components/common/IconButton.vue'
 import ContentEntryEditor from '@/components/content_value/ContentEntryEditor.vue'
 import Edit from '@/components/icons/Edit.vue'
 import FormatSelector from '@/components/content_value/FormatSelector.vue'
-import { decodeRedisKey } from '@/utils/key_convert.js'
+import { decodeRedisKey, nativeRedisKey } from '@/utils/key_convert.js'
 import ContentSearchInput from '@/components/content_value/ContentSearchInput.vue'
-import { ClipboardSetText } from 'wailsjs/runtime/runtime.js'
 import { formatBytes } from '@/utils/byte_convert.js'
+import copy from 'copy-text-to-clipboard'
+import SwitchButton from '@/components/common/SwitchButton.vue'
+import AlignLeft from '@/components/icons/AlignLeft.vue'
+import AlignCenter from '@/components/icons/AlignCenter.vue'
+import { TextAlignType } from '@/consts/text_align_type.js'
 
 const i18n = useI18n()
 const themeVars = useThemeVars()
@@ -36,7 +40,7 @@ const props = defineProps({
         default: -1,
     },
     value: {
-        type: Array,
+        type: [String, Array],
         default: () => [],
     },
     size: Number,
@@ -45,9 +49,10 @@ const props = defineProps({
     decode: String,
     end: Boolean,
     loading: Boolean,
+    textAlign: Number,
 })
 
-const emit = defineEmits(['loadmore', 'loadall', 'reload', 'match'])
+const emit = defineEmits(['loadmore', 'loadall', 'reload', 'match', 'update:textAlign'])
 
 /**
  *
@@ -78,7 +83,7 @@ const fieldFilterOption = ref(null)
 const fieldColumn = computed(() => ({
     key: 'key',
     title: () => i18n.t('common.field'),
-    align: 'center',
+    align: props.textAlign !== TextAlignType.Left ? 'center' : 'left',
     titleAlign: 'center',
     resizable: true,
     ellipsis: {
@@ -89,14 +94,17 @@ const fieldColumn = computed(() => ({
             },
             scrollable: true,
         },
-        lineClamp: 10,
+        lineClamp: 1,
     },
     filterOptionValue: fieldFilterOption.value,
-    className: inEdit.value ? 'clickable' : '',
+    className: inEdit.value ? 'clickable wordline' : 'wordline',
     filter: (value, row) => {
         return !!~row.k.indexOf(value.toString())
     },
     render: (row) => {
+        if (row.rm === true) {
+            return h('s', {}, decodeRedisKey(row.k))
+        }
         return decodeRedisKey(row.k)
     },
 }))
@@ -108,7 +116,7 @@ const isCode = computed(() => {
 const valueColumn = computed(() => ({
     key: 'value',
     title: () => i18n.t('common.value'),
-    align: isCode.value ? 'left' : 'center',
+    align: isCode.value ? 'left' : props.textAlign !== TextAlignType.Left ? 'center' : 'left',
     titleAlign: 'center',
     resizable: true,
     ellipsis: isCode.value
@@ -121,6 +129,7 @@ const valueColumn = computed(() => ({
                   },
                   scrollable: true,
               },
+              lineClamp: 1,
           },
     // filterOptionValue: valueFilterOption.value,
     className: inEdit.value ? 'clickable' : '',
@@ -131,10 +140,15 @@ const valueColumn = computed(() => ({
     //     return !!~row.v.indexOf(value.toString())
     // },
     render: (row) => {
+        let val = row.dv || nativeRedisKey(row.v)
         if (isCode.value) {
-            return h('pre', {}, row.dv || row.v)
+            return h('pre', { class: 'pre-wrap' }, val)
         }
-        return row.dv || row.v
+        val = truncate(val, { length: 500 })
+        if (row.rm === true) {
+            return h('s', {}, val)
+        }
+        return val
     },
 }))
 
@@ -142,6 +156,8 @@ const startEdit = async (no, key, value) => {
     currentEditRow.no = no
     currentEditRow.key = key
     currentEditRow.value = value
+    currentEditRow.decode = props.decode
+    currentEditRow.format = props.format
 }
 
 const saveEdit = async (field, value, decode, format) => {
@@ -183,8 +199,11 @@ const resetEdit = () => {
     currentEditRow.no = 0
     currentEditRow.key = ''
     currentEditRow.value = null
-    currentEditRow.format = formatTypes.RAW
-    currentEditRow.decode = decodeTypes.NONE
+    // if (currentEditRow.format !== props.format || currentEditRow.decode !== props.decode) {
+    //     nextTick(() => onFormatChanged(currentEditRow.decode, currentEditRow.format))
+    // }
+    // currentEditRow.format = formatTypes.RAW
+    // currentEditRow.decode = decodeTypes.NONE
 }
 
 const actionColumn = {
@@ -198,15 +217,28 @@ const actionColumn = {
         return h(EditableTableColumn, {
             editing: false,
             bindKey: row.k,
-            onCopy: async () => {
-                try {
-                    const succ = await ClipboardSetText(row.v)
-                    if (succ) {
-                        $message.success(i18n.t('interface.copy_succ'))
-                    }
-                } catch (e) {
-                    $message.error(e.message)
+            canRefresh: true,
+            onRefresh: async () => {
+                const { updated, success, msg } = await browserStore.getHashField({
+                    server: props.name,
+                    db: props.db,
+                    key: keyName.value,
+                    field: row.k,
+                    decode: props.decode,
+                    format: props.format,
+                })
+                if (success) {
+                    delete props.value[index]['rm']
+                    $message.success(i18n.t('dialogue.reload_succ'))
+                } else {
+                    // update fail, the key may have been deleted
+                    $message.error(msg)
+                    props.value[index]['rm'] = true
                 }
+            },
+            onCopy: async () => {
+                copy(row.v)
+                $message.success(i18n.t('interface.copy_succ'))
             },
             onEdit: () => startEdit(index + 1, row.k, row.v),
             onDelete: async () => {
@@ -330,13 +362,22 @@ defineExpose({
     <div class="content-wrapper flex-box-v">
         <slot name="toolbar" />
         <div class="tb2 value-item-part flex-box-h">
-            <div class="flex-box-h">
+            <div class="flex-box-h" style="max-width: 50%">
                 <content-search-input
                     ref="searchInputRef"
                     @filter-changed="onFilterInput"
                     @match-changed="onMatchInput" />
             </div>
             <div class="flex-item-expand"></div>
+            <switch-button
+                :icons="[AlignCenter, AlignLeft]"
+                :stroke-width="3.5"
+                :t-tooltips="['interface.text_align_center', 'interface.text_align_left']"
+                :value="props.textAlign"
+                size="medium"
+                unselect-stroke-width="3"
+                @update:value="(val) => emit('update:textAlign', val)" />
+            <n-divider vertical />
             <n-button-group>
                 <icon-button
                     :disabled="props.end || props.loading"
@@ -397,11 +438,12 @@ defineExpose({
                 class="entry-editor-container flex-item-expand"
                 style="width: 100%">
                 <content-entry-editor
+                    v-model:decode="currentEditRow.decode"
+                    v-model:format="currentEditRow.format"
                     v-model:fullscreen="fullEdit"
-                    :decode="currentEditRow.decode"
                     :field="currentEditRow.key"
                     :field-label="$t('common.field')"
-                    :format="currentEditRow.format"
+                    :key-path="props.keyPath"
                     :show="inEdit"
                     :value="currentEditRow.value"
                     :value-label="$t('common.value')"

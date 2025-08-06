@@ -75,7 +75,6 @@ const onClose = () => {}
     <n-modal
         v-model:show="dialogStore.decodeDialogVisible"
         :closable="false"
-        :close-on-esc="false"
         :mask-closable="false"
         :negative-button-props="{ focusable: false, size: 'medium' }"
         :negative-text="$t('common.cancel')"
@@ -83,8 +82,10 @@ const onClose = () => {}
         :positive-text="$t('common.confirm')"
         :show-icon="false"
         :title="editName ? $t('dialogue.decoder.edit_name') : $t('dialogue.decoder.name')"
+        close-on-esc
         preset="dialog"
         transform-origin="center"
+        @esc="onClose"
         @positive-click="onAddOrUpdate"
         @negative-click="onClose">
         <n-form :model="decoderForm" :show-require-mark="false" label-align="left" label-placement="top">
@@ -202,5 +203,5 @@ const onClose = () => {}
 </template>
 
 <style lang="scss" scoped>
-@import '@/styles/content';
+@use '@/styles/content';
 </style>

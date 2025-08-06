@@ -2,7 +2,7 @@
 <a href="https://github.com/tiny-craft/tiny-rdm/"><img src="build/appicon.png" width="120"/></a>
 </div>
 <h1 align="center">Tiny RDM</h1>
-<h4 align="center"><strong><a href="/">English</a></strong> | 简体中文</h4>
+<h4 align="center"><strong><a href="/">English</a></strong> | 简体中文 | <a href="https://github.com/tiny-craft/tiny-rdm/blob/main/README_ja.md">日本語</a></h4>
 <div align="center">
 
 [![License](https://img.shields.io/github/license/tiny-craft/tiny-rdm)](https://github.com/tiny-craft/tiny-rdm/blob/main/LICENSE)
@@ -46,7 +46,7 @@
 * 支持导入/导出数据
 * 支持发布订阅
 * 支持导入/导出连接配置
-* 自定义数据展示编码/解码
+* 自定义数据展示编码/解码([这是操作指引](https://redis.tinycraft.cc/zh/guide/custom-decoder/))
 
 ## 安装
 
@@ -62,7 +62,7 @@
 ### 运行环境要求
 
 * Go（最新版本）
-* Node.js >= 16
+* Node.js >= 20
 * NPM >= 9
 
 ### 安装wails
@@ -83,6 +83,13 @@ git clone https://github.com/tiny-craft/tiny-rdm --depth=1
 npm install --prefix ./frontend
 ```
 
+或者
+
+```bash
+cd frontend
+npm install
+```
+
 ### 编译运行开发版本
 
 ```bash
@@ -98,6 +105,10 @@ wails dev
 我会不定期更新一些关于独立开发的思考和感悟，以及独立产品的介绍，欢迎扫码关注~👏
 
 <img src="docs/images/wechat_official.png" alt="wechat" width="360" />
+
+### B站官方账号
+
+<img src="docs/images/bilibili_official.png" alt="bilibili" width="360" />
 
 ### 独立开发互助QQ群
 

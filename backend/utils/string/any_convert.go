@@ -2,7 +2,6 @@ package strutil
 
 import (
 	"encoding/json"
-	"regexp"
 	"strconv"
 	"strings"
 	sliceutil "tinyrdm/backend/utils/slice"
@@ -133,14 +132,41 @@ func AnyToString(value interface{}, prefix string, layer int) (s string) {
 //}
 
 func SplitCmd(cmd string) []string {
-	re := regexp.MustCompile(`'[^']+'|"[^"]+"|\S+`)
-	args := re.FindAllString(cmd, -1)
-	return sliceutil.FilterMap(args, func(i int) (string, bool) {
-		arg := strings.Trim(args[i], "\"")
-		arg = strings.Trim(arg, "'")
-		if len(arg) <= 0 {
+	var result []string
+	var curStr strings.Builder
+	var preChar int32
+	var quotesChar int32
+
+	cmdRune := []rune(cmd)
+	for _, char := range cmdRune {
+		if (char == '"' || char == '\'') && preChar != '\\' && (quotesChar == 0 || quotesChar == char) {
+			if quotesChar != 0 {
+				quotesChar = 0
+			} else {
+				quotesChar = char
+			}
+		} else if char == ' ' && quotesChar == 0 {
+			result = append(result, curStr.String())
+			curStr.Reset()
+		} else {
+			curStr.WriteRune(char)
+		}
+		preChar = char
+	}
+	result = append(result, curStr.String())
+
+	result = sliceutil.FilterMap(result, func(i int) (string, bool) {
+		var part = strings.TrimSpace(result[i])
+		if len(part) <= 0 {
 			return "", false
 		}
-		return arg, true
+		if strings.Contains(part, "\\") {
+			if unquotePart, e := strconv.Unquote(`"` + part + `"`); e == nil {
+				return unquotePart, true
+			}
+		}
+		return part, true
 	})
+
+	return result
 }

@@ -3,7 +3,7 @@ import { computed, h, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AddLink from '@/components/icons/AddLink.vue'
 import { NButton, NIcon, useThemeVars } from 'naive-ui'
-import { isEmpty, size } from 'lodash'
+import { isEmpty, size, truncate } from 'lodash'
 import { types, types as redisTypes } from '@/consts/support_redis_type.js'
 import EditableTableColumn from '@/components/common/EditableTableColumn.vue'
 import useDialogStore from 'stores/dialog.js'
@@ -16,8 +16,13 @@ import ContentEntryEditor from '@/components/content_value/ContentEntryEditor.vu
 import FormatSelector from '@/components/content_value/FormatSelector.vue'
 import Edit from '@/components/icons/Edit.vue'
 import ContentSearchInput from '@/components/content_value/ContentSearchInput.vue'
-import { ClipboardSetText } from 'wailsjs/runtime/runtime.js'
 import { formatBytes } from '@/utils/byte_convert.js'
+import copy from 'copy-text-to-clipboard'
+import { TextAlignType } from '@/consts/text_align_type.js'
+import AlignLeft from '@/components/icons/AlignLeft.vue'
+import AlignCenter from '@/components/icons/AlignCenter.vue'
+import SwitchButton from '@/components/common/SwitchButton.vue'
+import { nativeRedisKey } from '@/utils/key_convert.js'
 
 const i18n = useI18n()
 const themeVars = useThemeVars()
@@ -51,9 +56,10 @@ const props = defineProps({
     },
     end: Boolean,
     loading: Boolean,
+    textAlign: Number,
 })
 
-const emit = defineEmits(['loadmore', 'loadall', 'reload', 'match'])
+const emit = defineEmits(['loadmore', 'loadall', 'reload', 'match', 'update:textAlign'])
 
 /**
  *
@@ -84,7 +90,7 @@ const valueFilterOption = ref(null)
 const valueColumn = computed(() => ({
     key: 'value',
     title: () => i18n.t('common.value'),
-    align: isCode.value ? 'left' : 'center',
+    align: isCode.value ? 'left' : props.textAlign !== TextAlignType.Left ? 'center' : 'left',
     titleAlign: 'center',
     ellipsis: isCode.value
         ? false
@@ -96,26 +102,28 @@ const valueColumn = computed(() => ({
                   },
                   scrollable: true,
               },
+              lineClamp: 1,
           },
     filterOptionValue: valueFilterOption.value,
     className: inEdit.value ? 'clickable' : '',
-    filter: (value, row) => {
-        if (row.dv) {
-            return !!~row.dv.indexOf(value.toString())
-        }
-        return !!~row.v.indexOf(value.toString())
+    filter: (filterValue, row) => {
+        const val = row.dv || nativeRedisKey(row.v)
+        return !!~val.indexOf(filterValue.toString())
     },
     render: (row) => {
+        const val = row.dv || nativeRedisKey(row.v)
         if (isCode.value) {
-            return h('pre', {}, row.dv || row.v)
+            return h('pre', { class: 'pre-wrap' }, val)
         }
-        return row.dv || row.v
+        return truncate(val, { length: 500 })
     },
 }))
 
 const startEdit = async (no, value) => {
     currentEditRow.no = no
     currentEditRow.value = value
+    currentEditRow.decode = props.decode
+    currentEditRow.format = props.format
 }
 
 /**
@@ -142,7 +150,7 @@ const saveEdit = async (pos, value, decode, format) => {
             server: props.name,
             db: props.db,
             key: keyName.value,
-            index,
+            index: row.index,
             value,
             decode,
             format,
@@ -160,6 +168,9 @@ const saveEdit = async (pos, value, decode, format) => {
 const resetEdit = () => {
     currentEditRow.no = 0
     currentEditRow.value = null
+    // if (currentEditRow.format !== props.format || currentEditRow.decode !== props.decode) {
+    //     nextTick(() => onFormatChanged(currentEditRow.decode, currentEditRow.format))
+    // }
 }
 
 const actionColumn = {
@@ -169,22 +180,16 @@ const actionColumn = {
     align: 'center',
     titleAlign: 'center',
     fixed: 'right',
-    render: (row, index) => {
+    render: ({ index, v }, _) => {
         return h(EditableTableColumn, {
             editing: false,
             bindKey: `#${index + 1}`,
             onCopy: async () => {
-                try {
-                    const succ = await ClipboardSetText(row.v)
-                    if (succ) {
-                        $message.success(i18n.t('interface.copy_succ'))
-                    }
-                } catch (e) {
-                    $message.error(e.message)
-                }
+                copy(v)
+                $message.success(i18n.t('interface.copy_succ'))
             },
             onEdit: () => {
-                startEdit(index + 1, row.v)
+                startEdit(index + 1, v)
             },
             onDelete: async () => {
                 try {
@@ -216,7 +221,7 @@ const columns = computed(() => {
                 width: 80,
                 align: 'center',
                 titleAlign: 'center',
-                render: (row, index) => {
+                render: ({ index }, _) => {
                     return index + 1
                 },
             },
@@ -231,7 +236,7 @@ const columns = computed(() => {
                 width: 80,
                 align: 'center',
                 titleAlign: 'center',
-                render: (row, index) => {
+                render: ({ index }, _) => {
                     if (index + 1 === currentEditRow.no) {
                         // editing row, show edit state
                         return h(NIcon, { size: 16, color: 'red' }, () => h(Edit, { strokeWidth: 5 }))
@@ -245,12 +250,12 @@ const columns = computed(() => {
     }
 })
 
-const rowProps = (row, index) => {
+const rowProps = ({ index, v }, _) => {
     return {
         onClick: () => {
             // in edit mode, switch edit row by click
             if (inEdit.value) {
-                startEdit(index + 1, row.v)
+                startEdit(index + 1, v)
             }
         },
     }
@@ -304,13 +309,22 @@ defineExpose({
     <div class="content-wrapper flex-box-v">
         <slot name="toolbar" />
         <div class="tb2 value-item-part flex-box-h">
-            <div class="flex-box-h">
+            <div class="flex-box-h" style="max-width: 50%">
                 <content-search-input
                     ref="searchInputRef"
                     @filter-changed="onFilterInput"
                     @match-changed="onMatchInput" />
             </div>
             <div class="flex-item-expand"></div>
+            <switch-button
+                :icons="[AlignCenter, AlignLeft]"
+                :stroke-width="3.5"
+                :t-tooltips="['interface.text_align_center', 'interface.text_align_left']"
+                :value="props.textAlign"
+                size="medium"
+                unselect-stroke-width="3"
+                @update:value="(val) => emit('update:textAlign', val)" />
+            <n-divider vertical />
             <n-button-group>
                 <icon-button
                     :disabled="props.end || props.loading"
@@ -370,12 +384,13 @@ defineExpose({
                 class="entry-editor-container flex-item-expand"
                 style="width: 100%">
                 <content-entry-editor
+                    v-model:decode="currentEditRow.decode"
+                    v-model:format="currentEditRow.format"
                     v-model:fullscreen="fullEdit"
-                    :decode="currentEditRow.decode"
                     :field="currentEditRow.no"
                     :field-label="$t('common.index')"
                     :field-readonly="true"
-                    :format="currentEditRow.format"
+                    :key-path="props.keyPath"
                     :show="inEdit"
                     :value="currentEditRow.value"
                     :value-label="$t('common.value')"

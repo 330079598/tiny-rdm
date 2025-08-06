@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -13,7 +12,7 @@ import (
 )
 
 type pubsubItem struct {
-	client    *redis.Client
+	client    redis.UniversalClient
 	pubsub    *redis.PubSub
 	mutex     sync.Mutex
 	closeCh   chan struct{}
@@ -62,12 +61,8 @@ func (p *pubsubService) getItem(server string) (*pubsubItem, error) {
 		if uniClient, err = Connection().createRedisClient(conf.ConnectionConfig); err != nil {
 			return nil, err
 		}
-		var client *redis.Client
-		if client, ok = uniClient.(*redis.Client); !ok {
-			return nil, errors.New("create redis client fail")
-		}
 		item = &pubsubItem{
-			client: client,
+			client: uniClient,
 		}
 		p.items[server] = item
 	}
@@ -125,8 +120,10 @@ func (p *pubsubService) StartSubscribe(server string) (resp types.JSResp) {
 }
 
 func (p *pubsubService) processSubscribe(mutex *sync.Mutex, ch <-chan *redis.Message, closeCh <-chan struct{}, eventName string) {
-	lastEmitTime := time.Now().Add(-1 * time.Minute)
 	cache := make([]subMessage, 0, 1000)
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case data := <-ch:
@@ -139,10 +136,19 @@ func (p *pubsubService) processSubscribe(mutex *sync.Mutex, ch <-chan *redis.Mes
 					Channel:   data.Channel,
 					Message:   data.Payload,
 				})
-				if time.Now().Sub(lastEmitTime) > 300*time.Millisecond || len(cache) > 300 {
+				if len(cache) > 300 {
 					runtime.EventsEmit(p.ctx, eventName, cache)
 					cache = cache[:0:cap(cache)]
-					lastEmitTime = time.Now()
+				}
+			}()
+
+		case <-ticker.C:
+			func() {
+				mutex.Lock()
+				defer mutex.Unlock()
+				if len(cache) > 0 {
+					runtime.EventsEmit(p.ctx, eventName, cache)
+					cache = cache[:0:cap(cache)]
 				}
 			}()
 

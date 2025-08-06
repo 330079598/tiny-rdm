@@ -40,6 +40,7 @@
       "font_tip": "Sélectionner ou saisir le nom de la police",
       "font_size": "Taille de la police",
       "scan_size": "Taille par défaut pour SCAN",
+      "scan_size_tip": "Nombre d'éléments retournés par les commandes SCAN/HSCAN/SSCAN/ZSCAN",
       "key_icon_style": "Style d'icône de clé",
       "key_icon_style0": "Compact",
       "key_icon_style1": "Nom complet",
@@ -125,6 +126,8 @@
     "length": "Longueur",
     "entries": "Entrées",
     "memory_usage": "Utilisation de la mémoire",
+    "text_align_left": "Aligner à gauche",
+    "text_align_center": "Centrer",
     "view_as": "Voir comme",
     "decode_with": "Décoder / Décompresser",
     "custom_decoder": "Nouveau décodeur personnalisé",
@@ -263,8 +266,8 @@
         "auto_discover": "Découverte automatique",
         "password": "Mot de passe principal",
         "username": "Nom d'utilisateur principal",
-        "pwd_tip": "(Optionnel) Nom d'utilisateur d'authentification principal",
-        "usr_tip": "(Optionnel) Mot de passe d'authentification principal (Redis > 6.0)"
+        "pwd_tip": "(Optionnel) Mot de passe d'authentification principal (Redis > 6.0)",
+        "usr_tip": "(Optionnel) Nom d'utilisateur d'authentification principal"
       },
       "cluster": {
         "title": "Cluster",
@@ -295,6 +298,8 @@
       "affected_key": "Clés affectées",
       "show_affected_key": "Afficher les clés affectées",
       "confirm_delete_key": "Confirmer la suppression de {num} clé(s)",
+      "direct_delete": "Supprimer le modèle correspondant directement",
+      "confirm_delete": "Confirmer la suppression",
       "async_delete": "Exécution asynchrone",
       "async_delete_title": "Ne pas attendre le résultat",
       "confirm_flush": "Je sais ce que je fais !",
@@ -327,8 +332,9 @@
     "filter": {
       "set_key_filter": "Définir le filtre de clé",
       "filter_pattern": "Modèle",
-      "filter_pattern_tip": "* correspond à 0 ou plusieurs caractères, ex : 'key*'\n? correspond à un seul caractère, ex : 'key?'\n[] correspond à une plage, ex : 'key[1-3]' échappe les caractères spéciaux",
-      "exact_match_tip": "Correspondance exacte"
+      "filter_pattern_tip": "Filtrez la liste actuelle en saisissant directement, et scannez le serveur en appuyant sur 'Entrée'.\n\n* correspond à 0 ou plusieurs caractères, ex : 'key*'\n? correspond à un seul caractère, ex : 'key?'\n[] correspond à une plage, ex : 'key[1-3]' échappe les caractères spéciaux",
+      "exact_match_tip": "Correspondance exacte",
+      "filter_type_not_support": "Le filtrage par type n’est pas pris en charge pour Redis 5.x et les versions antérieures"
     },
     "export": {
       "name": "Exporter les données",
@@ -456,7 +462,7 @@
     "copy_log": "Copier le journal",
     "save_log": "Enregistrer le journal",
     "clean_log": "Nettoyer le journal",
-    "always_show_last": "Toujours afficher les dernières"
+    "always_show_last": "Défilement automatique vers le dernier message"
   },
   "pubsub": {
     "title": "Pub/Sub",
@@ -469,6 +475,6 @@
     "channel": "Canal",
     "message": "Message",
     "receive_message": "{total} messages reçus",
-    "always_show_last": "Toujours afficher les derniers"
+    "always_show_last": "Défilement automatique vers le dernier message"
   }
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"github.com/klauspost/compress/zip"
 	"github.com/redis/go-redis/v9"
 	"github.com/vrischmann/userdir"
@@ -65,7 +64,7 @@ func (c *connectionService) buildOption(config types.ConnectionConfig) (*redis.O
 	} else if config.Proxy.Type == 2 {
 		// use custom proxy
 		proxyUrl := url.URL{
-			Host: fmt.Sprintf("%s:%d", config.Proxy.Addr, config.Proxy.Port),
+			Host: net.JoinHostPort(config.Proxy.Addr, strconv.Itoa(config.Proxy.Port)),
 		}
 		if len(config.Proxy.Username) > 0 {
 			proxyUrl.User = url.UserPassword(config.Proxy.Username, config.Proxy.Password)
@@ -111,7 +110,7 @@ func (c *connectionService) buildOption(config types.ConnectionConfig) (*redis.O
 			return nil, errors.New("invalid login type")
 		}
 
-		sshAddr = fmt.Sprintf("%s:%d", config.SSH.Addr, config.SSH.Port)
+		sshAddr = net.JoinHostPort(config.SSH.Addr, strconv.Itoa(config.SSH.Port))
 	}
 
 	var tlsConfig *tls.Config
@@ -145,14 +144,15 @@ func (c *connectionService) buildOption(config types.ConnectionConfig) (*redis.O
 	}
 
 	option := &redis.Options{
-		Username:         config.Username,
-		Password:         config.Password,
-		DialTimeout:      time.Duration(config.ConnTimeout) * time.Second,
-		ReadTimeout:      time.Duration(config.ExecTimeout) * time.Second,
-		WriteTimeout:     time.Duration(config.ExecTimeout) * time.Second,
-		TLSConfig:        tlsConfig,
-		DisableIndentity: true,
-		IdentitySuffix:   "tinyrdm_",
+		Username:        config.Username,
+		Password:        config.Password,
+		DialTimeout:     time.Duration(config.ConnTimeout) * time.Second,
+		ReadTimeout:     time.Duration(config.ExecTimeout) * time.Second,
+		WriteTimeout:    time.Duration(config.ExecTimeout) * time.Second,
+		ConnMaxIdleTime: 0,
+		TLSConfig:       tlsConfig,
+		DisableIdentity: true,
+		IdentitySuffix:  "tinyrdm_",
 	}
 	if config.Network == "unix" {
 		option.Network = "unix"
@@ -168,9 +168,9 @@ func (c *connectionService) buildOption(config types.ConnectionConfig) (*redis.O
 			port = config.Port
 		}
 		if len(config.Addr) <= 0 {
-			option.Addr = fmt.Sprintf("127.0.0.1:%d", port)
+			option.Addr = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 		} else {
-			option.Addr = fmt.Sprintf("%s:%d", config.Addr, port)
+			option.Addr = net.JoinHostPort(config.Addr, strconv.Itoa(port))
 		}
 	}
 
@@ -196,8 +196,27 @@ func (c *connectionService) buildOption(config types.ConnectionConfig) (*redis.O
 		}
 	}
 	if dialer != nil {
-		option.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dial := func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return dialer.Dial(network, addr)
+		}
+
+		if tlsConfig != nil {
+			// use dialer with tls config
+			option.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				rawConn, err := dial(ctx, network, addr)
+				if err != nil {
+					rawConn.Close()
+					return nil, err
+				}
+				tlsConn := tls.Client(rawConn, tlsConfig)
+				if err = tlsConn.Handshake(); err != nil {
+					rawConn.Close()
+					return nil, err
+				}
+				return tlsConn, nil
+			}
+		} else {
+			option.Dialer = dial
 		}
 		option.ReadTimeout = -2
 		option.WriteTimeout = -2
@@ -224,9 +243,13 @@ func (c *connectionService) createRedisClient(config types.ConnectionConfig) (re
 		if len(addr) < 2 {
 			return nil, errors.New("cannot get master address")
 		}
-		option.Addr = fmt.Sprintf("%s:%s", addr[0], addr[1])
+		option.Addr = net.JoinHostPort(addr[0], addr[1])
 		option.Username = config.Sentinel.Username
 		option.Password = config.Sentinel.Password
+		if option.Dialer != nil {
+			option.ReadTimeout = -2
+			option.WriteTimeout = -2
+		}
 	}
 
 	if config.LastDB > 0 {
@@ -235,6 +258,8 @@ func (c *connectionService) createRedisClient(config types.ConnectionConfig) (re
 
 	rdb := redis.NewClient(option)
 	if config.Cluster.Enable {
+		defer rdb.Close()
+
 		// connect to cluster
 		var slots []redis.ClusterSlot
 		if slots, err = rdb.ClusterSlots(c.ctx).Result(); err == nil {
@@ -262,7 +287,7 @@ func (c *connectionService) createRedisClient(config types.ConnectionConfig) (re
 				ConnMaxIdleTime:       option.ConnMaxIdleTime,
 				ConnMaxLifetime:       option.ConnMaxLifetime,
 				TLSConfig:             option.TLSConfig,
-				DisableIndentity:      option.DisableIndentity,
+				DisableIdentity:       option.DisableIdentity,
 			}
 			if option.Dialer != nil {
 				clusterOptions.Dialer = option.Dialer
@@ -310,7 +335,7 @@ func (c *connectionService) ListSentinelMasters(config types.ConnectionConfig) (
 		if infoMap, ok := info.(map[any]any); ok {
 			retInfo = append(retInfo, map[string]string{
 				"name": infoMap["name"].(string),
-				"addr": fmt.Sprintf("%s:%s", infoMap["ip"].(string), infoMap["port"].(string)),
+				"addr": net.JoinHostPort(infoMap["ip"].(string), infoMap["port"].(string)),
 			})
 		}
 	}
@@ -328,7 +353,7 @@ func (c *connectionService) TestConnection(config types.ConnectionConfig) (resp 
 	}
 	defer client.Close()
 
-	if _, err = client.Ping(c.ctx).Result(); err != nil && err != redis.Nil {
+	if _, err = client.Ping(c.ctx).Result(); err != nil && !errors.Is(err, redis.Nil) {
 		resp.Msg = err.Error()
 	} else {
 		resp.Success = true

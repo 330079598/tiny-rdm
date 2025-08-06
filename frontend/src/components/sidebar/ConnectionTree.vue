@@ -295,6 +295,7 @@ const openConnection = async (name) => {
             tabStore.upsertTab({
                 server: name,
                 db: browserStore.getSelectedDB(name),
+                forceSwitch: true,
             })
         }
     } catch (e) {
@@ -437,7 +438,7 @@ const findSiblingsAndIndex = (node, nodes) => {
 }
 
 // delay save until drop stopped after 2 seconds
-const saveSort = debounce(connectionStore.saveConnectionSorted, 2000, { trailing: true })
+const saveSort = debounce(connectionStore.saveConnectionSorted, 1500, { trailing: true })
 const handleDrop = ({ node, dragNode, dropPosition }) => {
     const [dragNodeSiblings, dragNodeIndex] = findSiblingsAndIndex(dragNode, connectionStore.connections)
     if (dragNodeSiblings === null || dragNodeIndex === null) {
@@ -480,12 +481,7 @@ const onCancelOpen = () => {
 
 <template>
     <div class="connection-tree-wrapper" @keydown.esc="contextMenuParam.show = false">
-        <n-empty
-            v-if="isEmpty(connectionStore.connections)"
-            :description="$t('interface.empty_server_list')"
-            class="empty-content" />
         <n-tree
-            v-else
             :animated="false"
             :block-line="true"
             :block-node="true"
@@ -503,7 +499,11 @@ const onCancelOpen = () => {
             virtual-scroll
             @drop="handleDrop"
             @update:selected-keys="onUpdateSelectedKeys"
-            @update:expanded-keys="onUpdateExpandedKeys" />
+            @update:expanded-keys="onUpdateExpandedKeys">
+            <template #empty>
+                <n-empty :description="$t('interface.empty_server_list')" class="empty-content" />
+            </template>
+        </n-tree>
 
         <!-- status display modal -->
         <n-modal :show="connectingServer !== ''" transform-origin="center">
@@ -543,7 +543,7 @@ const onCancelOpen = () => {
 </template>
 
 <style lang="scss" scoped>
-@import '@/styles/content';
+@use '@/styles/content';
 
 .connection-tree-wrapper {
     height: 100%;

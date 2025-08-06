@@ -1,7 +1,7 @@
 <script setup>
 import ContentPane from './components/content/ContentPane.vue'
 import BrowserPane from './components/sidebar/BrowserPane.vue'
-import { computed, onMounted, reactive, ref, watchEffect } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue'
 import { debounce } from 'lodash'
 import { useThemeVars } from 'naive-ui'
 import Ribbon from './components/sidebar/Ribbon.vue'
@@ -13,7 +13,7 @@ import ContentLogPane from './components/content/ContentLogPane.vue'
 import ContentValueTab from '@/components/content/ContentValueTab.vue'
 import ToolbarControlWidget from '@/components/common/ToolbarControlWidget.vue'
 import { EventsOn, WindowIsFullscreen, WindowIsMaximised, WindowToggleMaximise } from 'wailsjs/runtime/runtime.js'
-import { isMacOS } from '@/utils/platform.js'
+import { isMacOS, isWindows } from '@/utils/platform.js'
 import iconUrl from '@/assets/images/icon.png'
 import ResizeableWrapper from '@/components/common/ResizeableWrapper.vue'
 import { extraTheme } from '@/utils/extra_theme.js'
@@ -57,6 +57,9 @@ const logoPaddingLeft = ref(10)
 const maximised = ref(false)
 const hideRadius = ref(false)
 const wrapperStyle = computed(() => {
+    if (isWindows()) {
+        return {}
+    }
     return hideRadius.value
         ? {}
         : {
@@ -65,6 +68,11 @@ const wrapperStyle = computed(() => {
           }
 })
 const spinStyle = computed(() => {
+    if (isWindows()) {
+        return {
+            backgroundColor: themeVars.value.bodyColor,
+        }
+    }
     return hideRadius.value
         ? {
               backgroundColor: themeVars.value.bodyColor,
@@ -109,7 +117,28 @@ onMounted(async () => {
     onToggleFullscreen(fullscreen === true)
     const maximised = await WindowIsMaximised()
     onToggleMaximize(maximised)
+    window.addEventListener('keydown', onKeyShortcut)
 })
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKeyShortcut)
+})
+
+const onKeyShortcut = (e) => {
+    const isCtrlOn = isMacOS() ? e.metaKey : e.ctrlKey
+    switch (e.key) {
+        case 'w':
+            if (isCtrlOn) {
+                // close current tab
+                const tabStore = useTabStore()
+                const currentTab = tabStore.currentTab
+                if (currentTab != null) {
+                    tabStore.closeTab(currentTab.name)
+                }
+            }
+            break
+    }
+}
 </script>
 
 <template>
@@ -133,7 +162,7 @@ onMounted(async () => {
                     }">
                     <n-space :size="3" :wrap="false" :wrap-item="false" align="center">
                         <n-avatar :size="32" :src="iconUrl" color="#0000" style="min-width: 32px" />
-                        <div style="min-width: 68px; font-weight: 800">Tiny RDM</div>
+                        <div style="min-width: 68px; white-space: nowrap; font-weight: 800">Tiny RDM</div>
                         <transition name="fade">
                             <n-text v-if="tabStore.nav === 'browser'" class="ellipsis" strong style="font-size: 13px">
                                 - {{ tabStore.currentTabName }}
@@ -145,7 +174,7 @@ onMounted(async () => {
                 <div v-show="tabStore.nav === 'browser'" class="app-toolbar-tab flex-item-expand">
                     <content-value-tab />
                 </div>
-                <div class="flex-item-expand"></div>
+                <div class="flex-item-expand" style="min-width: 15px"></div>
                 <!-- simulate window control buttons -->
                 <toolbar-control-widget
                     v-if="!isMacOS()"
@@ -233,6 +262,7 @@ onMounted(async () => {
         align-self: flex-end;
         margin-bottom: -1px;
         margin-left: 3px;
+        overflow: auto;
     }
 
     #app-content {

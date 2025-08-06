@@ -3,7 +3,7 @@
 </div>
 <h1 align="center">Tiny RDM</h1>
 <h4 align="center"><strong>English</strong> | <a href="https://github.com/tiny-craft/tiny-rdm/blob/main/README_zh.md">
-简体中文</a></h4>
+简体中文</a> | <a href="https://github.com/tiny-craft/tiny-rdm/blob/main/README_ja.md">日本語</a></h4>
 <div align="center">
 
 [![License](https://img.shields.io/github/license/tiny-craft/tiny-rdm)](https://github.com/tiny-craft/tiny-rdm/blob/main/LICENSE)
@@ -51,7 +51,7 @@ Linux.</strong>
 * Support import/export data.
 * Support publish/subscribe.
 * Support import/export connection profile.
-* Custom data encoder and decoder for value display.
+* Custom data encoder and decoder for value display ([Here are the instructions](https://redis.tinycraft.cc/guide/custom-decoder/)).
 
 ## Installation
 
@@ -67,7 +67,7 @@ Available to download for free from [here](https://github.com/tiny-craft/tiny-rd
 ### Prerequisites
 
 * Go (latest version)
-* Node.js >= 16
+* Node.js >= 20
 * NPM >= 9
 
 ### Install Wails
@@ -88,12 +88,23 @@ git clone https://github.com/tiny-craft/tiny-rdm --depth=1
 npm install --prefix ./frontend
 ```
 
+or
+
+```bash
+cd frontend
+npm install
+```
+
 ### Compile and Run
 
 ```bash
 wails dev
 ```
 ## About
+
+### Thanks
+
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
 
 ### Wechat Official Account
 
