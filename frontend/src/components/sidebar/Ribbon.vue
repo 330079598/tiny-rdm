@@ -121,21 +121,6 @@ const onSelectPreferenceMenu = (key) => {
     }
 }
 
-const openWechatOfficial = () => {
-    trackEvent('open', { target: 'wechat_official' })
-    showWechat.value = true
-}
-
-const openX = () => {
-    trackEvent('open', { target: 'x' })
-    BrowserOpenURL('https://twitter.com/LykinHuang')
-}
-
-const openGithub = () => {
-    trackEvent('open', { target: 'github' })
-    BrowserOpenURL('https://github.com/tiny-craft/tiny-rdm')
-}
-
 const exThemeVars = computed(() => {
     return extraTheme(prefStore.isDark)
 })
@@ -175,27 +160,6 @@ const exThemeVars = computed(() => {
                 @select="onSelectPreferenceMenu">
                 <icon-button :icon="Config" :size="iconSize" :stroke-width="3" />
             </n-dropdown>
-            <icon-button
-                v-if="prefStore.currentLanguage === 'zh'"
-                :icon="QRCode"
-                :size="iconSize"
-                :tooltip-delay="100"
-                t-tooltip="ribbon.wechat_official"
-                @click="openWechatOfficial" />
-            <icon-button
-                v-else
-                :border="false"
-                :icon="Twitter"
-                :size="iconSize"
-                :tooltip-delay="100"
-                t-tooltip="ribbon.follow_x"
-                @click="openX" />
-            <icon-button
-                :icon="Github"
-                :size="iconSize"
-                :tooltip-delay="100"
-                t-tooltip="ribbon.github"
-                @click="openGithub" />
         </div>
 
         <!-- wechat official modal -->
